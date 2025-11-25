@@ -12,6 +12,7 @@ const leaveSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      lowercase: true,
     },
     description: {
       type: String,
@@ -26,9 +27,9 @@ const leaveSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: function (val) {
-          return val > this.fromDate;
+          return val >= this.fromDate;
         },
-        message: "To Date must be after From Date",
+        message: "To Date must be same or after From Date",
       },
     },
     totalDays: {

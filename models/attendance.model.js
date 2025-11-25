@@ -19,8 +19,8 @@ const attendanceSchema = new mongoose.Schema(
       type: Number,
     },
     date: {
-      type: String,
-      default: () => dayjs().format("YYYY-MM-DD"),
+      type: Date,
+      default: () => dayjs().startOf("day").toDate(),
     },
     isPresent: {
       type: Boolean,

@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import { response } from "../utils/response.js";
 import Attendance from "../models/attendance.model.js";
 import Employee from "../models/employee.model.js";
+import mongoose from "mongoose";
 
 export const attendanceToggle = async (req, res) => {
   try {
@@ -102,5 +103,28 @@ export const getAttendanceForAllEmployees = async (req, res) => {
     });
   } catch (error) {
     response(res, 500, "Internal server error");
+  }
+};
+
+export const getMonthlyAttendance = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    if (!mongoose.isValidObjectId(employeeId)) {
+      return response(res, 400, "Invalid Employee ID");
+    }
+    const month = req.query.month || dayjs().format("YYYY-MM");
+
+    const startMonth = dayjs(month).startOf("month").toDate();
+    const endMonth = dayjs(month).endOf("month").toDate();
+
+    const attendanceByMonth = await Attendance.find({
+      employeeDetails: employeeId,
+      date: { $gte: startMonth, $lte: endMonth },
+    });
+
+    response(res, 200, `Fetched Attendance of ${month}`, attendanceByMonth);
+  } catch (error) {
+    console.log(error);
+    response(res, 500, "Internal Server Error");
   }
 };

@@ -1,6 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middlware.js";
 import {
+  adminSummary,
   adminViewLeaveHistory,
   applyLeave,
   employeesLeaveHistory,
@@ -14,11 +15,19 @@ const leaveRouter = express.Router();
 ///// Static Routes /////
 leaveRouter.post("/leave/apply", authMiddleware, applyLeave);
 leaveRouter.get("/leave/manager/team", authMiddleware, getleavesManagerTeam);
+
+///// Dashboard Routes /////
 leaveRouter.get(
   "/leave/admin",
   authMiddleware,
   adminHrAndLoggedUser,
   adminViewLeaveHistory
+);
+leaveRouter.get(
+  "/leave/admin/summary",
+  authMiddleware,
+  adminHrAndLoggedUser,
+  adminSummary
 );
 
 ///// Dynamic Routes /////

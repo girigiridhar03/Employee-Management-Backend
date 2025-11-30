@@ -8,7 +8,7 @@ export const applyLeave = async (req, res) => {
   try {
     const { leaveType, description, fromDate, toDate } = req.body;
     const employeeId = req.employee.id;
-
+    const leaveTypeArr = ["sick leave", "casual leave", "paid leave"];
     const employee = await Employee.findById(employeeId).select("reportingTo");
 
     const requiredFields = ["leaveType", "fromDate", "toDate"];
@@ -17,6 +17,10 @@ export const applyLeave = async (req, res) => {
       if (!req.body[field]) {
         return response(res, 400, `${field} is required`);
       }
+    }
+
+    if (!leaveTypeArr.includes(leaveType)) {
+      return response(res, 400, "Invalid leave type");
     }
 
     const from = dayjs(fromDate).startOf("day").toDate();
@@ -289,6 +293,205 @@ export const adminViewLeaveHistory = async (req, res) => {
       totalPages,
     });
   } catch (error) {
+    response(res, 500, "Internal Server error");
+  }
+};
+
+export const adminSummary = async (req, res) => {
+  try {
+    const { m } = req.query;
+    const month = m ? dayjs(m, "YYYY-MM") : dayjs().format("YYYY-MM");
+
+    const monthStart = dayjs(month).startOf("month").toDate();
+    const monthEnd = dayjs(month).endOf("month").toDate();
+
+    const todayStart = dayjs().startOf("day").toDate();
+    const todayEnd = dayjs().endOf("day").toDate();
+
+    const summary = await Leave.aggregate([
+      {
+        $facet: {
+          todaySummary: [
+            {
+              $match: {
+                fromDate: { $lte: todayEnd },
+                toDate: { $gte: todayStart },
+              },
+            },
+            {
+              $group: {
+                _id: "$status",
+                count: {
+                  $sum: 1,
+                },
+              },
+            },
+          ],
+          upComingLeaves: [
+            {
+              $match: {
+                fromDate: {
+                  $gte: todayEnd,
+                },
+              },
+            },
+            {
+              $count: "count",
+            },
+          ],
+          monthlyLeaves: [
+            {
+              $match: {
+                fromDate: { $lte: monthEnd },
+                toDate: { $gte: monthStart },
+              },
+            },
+            {
+              $count: "total",
+            },
+          ],
+          monthlyByType: [
+            {
+              $match: {
+                fromDate: { $lte: monthEnd },
+                toDate: { $gte: monthStart },
+              },
+            },
+            {
+              $group: {
+                _id: "$leaveType",
+                count: {
+                  $sum: 1,
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                leaveType: "$_id",
+                count: 1,
+              },
+            },
+          ],
+          monthlyByStatus: [
+            {
+              $match: {
+                fromDate: { $lte: monthEnd },
+                toDate: { $gte: monthStart },
+              },
+            },
+            {
+              $group: {
+                _id: "$status",
+                count: {
+                  $sum: 1,
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                status: "$_id",
+                count: 1,
+              },
+            },
+          ],
+          byDepartment: [
+            {
+              $match: {
+                fromDate: { $lte: monthEnd },
+                toDate: { $gte: monthStart },
+              },
+            },
+            {
+              $lookup: {
+                from: "employees",
+                localField: "employeeDetails",
+                foreignField: "_id",
+                as: "emp",
+              },
+            },
+            {
+              $unwind: "$emp",
+            },
+            {
+              $group: {
+                _id: "$emp.designation",
+                count: { $sum: 1 },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                designation: "$_id",
+                count: 1,
+              },
+            },
+          ],
+          pendingByManager: [
+            {
+              $match: {
+                status: "pending",
+              },
+            },
+            {
+              $group: {
+                _id: "$reportingTo",
+                pendingCount: {
+                  $sum: 1,
+                },
+              },
+            },
+            {
+              $lookup: {
+                from: "employees",
+                localField: "_id",
+                foreignField: "_id",
+                as: "manager",
+              },
+            },
+            {
+              $unwind: "$manager",
+            },
+            {
+              $project: {
+                _id: 0,
+                managerId: "$manager.employeeId",
+                managerName: "$manager.username",
+                pendingCount: 1,
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const data = summary[0];
+
+    const today = {
+      onLeave: data.todaySummary.find((i) => i._id === "approved")?.count || 0,
+      pending: data.todaySummary.find((i) => i._id === "pending")?.count || 0,
+      approved: data.todaySummary.find((i) => i._id === "approved")?.count || 0,
+      rejected: data.todaySummary.find((i) => i._id === "rejected")?.count || 0,
+    };
+
+    response(res, 200, "Fetched leave summary", {
+      date: dayjs().format("YYYY-MM-DD"),
+      month,
+      summary: {
+        today,
+        upComingLeaves: data.upComingLeaves[0]?.count || 0,
+        monthlyLeaves: {
+          total: data.monthlyLeaves[0]?.total,
+          byType: data.monthlyByType,
+          byStatus: data.monthlyByStatus,
+          byDepartment: data.byDepartment,
+        },
+        pendingApprovalsByManager: data.pendingByManager,
+      },
+    });
+  } catch (error) {
+    console.log(error);
     response(res, 500, "Internal Server error");
   }
 };

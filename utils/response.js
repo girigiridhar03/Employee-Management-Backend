@@ -5,6 +5,7 @@ export const response = (res, statusCode, message, data = null) => {
   }
   const responseObj = {
     success: statusCode < 400,
+    statusCode : statusCode,
     message,
     ...(data ? { data } : {}),
   };

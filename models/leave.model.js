@@ -13,6 +13,7 @@ const leaveSchema = new mongoose.Schema(
       required: true,
       trim: true,
       lowercase: true,
+      enum: ["sick leave", "casual leave", "paid leave"],
     },
     description: {
       type: String,

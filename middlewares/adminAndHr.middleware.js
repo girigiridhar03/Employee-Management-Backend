@@ -4,7 +4,7 @@ const adminHrAndLoggedUser = async (req, res, next) => {
   try {
     const role = req.employee.role;
 
-    if (role === "admin" || role === "hr") {
+    if (role === "admin" || role === "hr" || role === "CEO") {
       return next();
     }
 

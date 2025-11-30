@@ -5,6 +5,7 @@ import { response } from "../utils/response.js";
 import jwt from "jsonwebtoken";
 import dayjs from "dayjs";
 import Attendance from "../models/attendance.model.js";
+import Leave from "../models/leave.model.js";
 
 export const createEmployee = async (req, res) => {
   try {
@@ -124,7 +125,6 @@ export const getAllEmployees = async (req, res) => {
 
     const allEmployees = await Employee.find({ status: "active" })
       .populate("reportingTo", "-password -salary -status")
-      .populate("createdBy", "-password -salary -status")
       .select("-password -createdBy -salary -status")
       .skip(skip)
       .limit(size);
@@ -133,16 +133,38 @@ export const getAllEmployees = async (req, res) => {
 
     const attendanceRecords = await Attendance.find({ date: today });
 
+    const todayStart = dayjs().startOf("day").toDate();
+    const todayEnd = dayjs().endOf("day").toDate();
+
+    const leaveRecords = await Leave.find({
+      status: { $ne: "rejected" },
+      fromDate: { $lte: todayEnd },
+      toDate: { $gte: todayStart },
+    });
+
     const attendanceMap = {};
+    const leaveMap = {};
 
     attendanceRecords.forEach((att) => {
       attendanceMap[String(att.employeeDetails)] = att;
     });
 
+    leaveRecords.forEach((leave) => {
+      leaveMap[String(leave.employeeDetails)] = leave;
+    });
+
     const enrichedEmployee = allEmployees.map((emp) => {
       const att = attendanceMap[String(emp._id)];
+      const leave = leaveMap[String(emp._id)];
 
-      if (!att) {
+      if (leave) {
+        return {
+          ...emp._doc,
+          attendance: {
+            status: "Leave",
+          },
+        };
+      } else if (!att) {
         return {
           ...emp._doc,
           attendance: {
@@ -190,7 +212,23 @@ export const getSingleEmployeeDetails = async (req, res) => {
     });
     let obj = {};
 
-    if (!attendance) {
+    const todayStart = dayjs().startOf("day").toDate();
+    const todayEnd = dayjs().endOf("day").toDate();
+
+    const leave = await Leave.find({
+      employeeDetails: id,
+      status: { $ne: "rejected" },
+      fromDate: {
+        $lte: todayEnd,
+      },
+      toDate: {
+        $gte: todayStart,
+      },
+    });
+
+    if (leave) {
+      obj.status = "Leave";
+    } else if (!attendance) {
       obj.status = "yet-to-checkin";
     } else {
       obj.status = attendance.status;
@@ -211,7 +249,9 @@ export const getSingleEmployeeDetails = async (req, res) => {
     } else {
       selectFields = "-password -salary";
     }
-    const employee = await Employee.findById(id).select(selectFields);
+    const employee = await Employee.findById(id)
+      .populate("reportingTo", "-password -salary -status")
+      .select(selectFields);
 
     if (!employee) {
       return response(res, 404, "Employee not found");

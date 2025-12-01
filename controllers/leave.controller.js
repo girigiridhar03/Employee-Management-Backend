@@ -3,13 +3,16 @@ import Leave from "../models/leave.model.js";
 import Employee from "../models/employee.model.js";
 import dayjs from "dayjs";
 import mongoose from "mongoose";
+import Notification from "../models/notification.model.js";
 
 export const applyLeave = async (req, res) => {
   try {
     const { leaveType, description, fromDate, toDate } = req.body;
     const employeeId = req.employee.id;
     const leaveTypeArr = ["sick leave", "casual leave", "paid leave"];
-    const employee = await Employee.findById(employeeId).select("reportingTo");
+    const employee = await Employee.findById(employeeId).select(
+      "reportingTo _id username"
+    );
 
     const requiredFields = ["leaveType", "fromDate", "toDate"];
 
@@ -52,7 +55,7 @@ export const applyLeave = async (req, res) => {
     }
 
     const leave = await Leave({
-      employeeDetails: employeeId,
+      employeeDetails: employee._id,
       leaveType,
       description,
       fromDate,
@@ -65,6 +68,19 @@ export const applyLeave = async (req, res) => {
     const getLeaveDetails = await Leave.findById(leave._id)
       .populate("employeeDetails", "username email employeeId")
       .populate("reportingTo", "username email employeeId");
+
+    const fDate = dayjs(getLeaveDetails.fromDate).format("MMM-DD");
+    const tDate = dayjs(getLeaveDetails.toDate).format("MMM-DD");
+
+    const notify = {
+      title: `Leave Request Submitted`,
+      message: `Employee ${employee.username} applied for leave from ${fDate} to ${tDate} `,
+      from: employeeId,
+      to: employee.reportingTo,
+      type: "leave",
+    };
+
+    await Notification.create(notify);
 
     response(res, 201, "Leave applied successfully", getLeaveDetails);
   } catch (error) {

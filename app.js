@@ -18,10 +18,12 @@ app.use(express.static(path.join(__dirname, "public")));
 import employeeRouter from "./routes/employee.routes.js";
 import attendanceRouter from "./routes/attendance.routes.js";
 import leaveRouter from "./routes/leave.routes.js";
+import notificationRouter from "./routes/notification.routes.js";
 
 ///// Routes /////
 app.use("/api", employeeRouter);
 app.use("/api", attendanceRouter);
 app.use("/api", leaveRouter);
+app.use("/api", notificationRouter);
 
 export default app;

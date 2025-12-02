@@ -166,6 +166,30 @@ export const managerApproveAndReject = async (req, res) => {
 
     leave.status = status?.toLowerCase();
     await leave.save();
+
+    const fDate = dayjs(leave.fromDate).format("MMM-DD");
+    const tDate = dayjs(leave.toDate).format("MMM-DD");
+
+    let message;
+
+    if (status?.toLowerCase() === "rejected") {
+      message = `Your leave request for ${fDate} to ${tDate} was ${status?.toLowerCase()}.`;
+    }
+
+    if (status?.toLowerCase() === "approved") {
+      message = `Your leave from ${fDate} to ${tDate} has been ${status?.toLowerCase()}.`;
+    }
+
+    const notify = {
+      title: `Leave ${status?.toLowerCase()}`,
+      message,
+      from: leave.reportingTo,
+      to: leave.employeeDetails,
+      type: "leave",
+    };
+
+    await Notification.create(notify);
+
     return response(res, 200, `Leave ${status} successfully`, leave);
   } catch (error) {
     response(res, 500, "Internal Server error");

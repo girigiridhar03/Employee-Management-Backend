@@ -34,3 +34,21 @@ export const getAllNotifications = async (req, res) => {
     response(res, 500, "Internal Server errro");
   }
 };
+
+export const markAllNotificationsAsRead = async (req, res) => {
+  try {
+    const employeeId = req.employee.id;
+    const result = await Notification.updateMany(
+      { to: employeeId, isRead: false },
+      { $set: { isRead: true } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return response(res, 404, "No unread notifications found");
+    }
+
+    response(res, 200, "All notifications marked as read");
+  } catch (error) {
+    response(res, 500, "Internal Server error");
+  }
+};

@@ -1,5 +1,7 @@
 import dayjs from "dayjs";
 import mongoose from "mongoose";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
+dayjs.extend(isSameOrAfter);
 
 const holidaySchema = new mongoose.Schema(
   {
@@ -24,7 +26,7 @@ const holidaySchema = new mongoose.Schema(
     classification: {
       type: String,
       required: true,
-      enum: ["Holiday", "Restricted holiday"],
+      enum: ["holiday", "restricted holiday"],
     },
 
     totalDays: {

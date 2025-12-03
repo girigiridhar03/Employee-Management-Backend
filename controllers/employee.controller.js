@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import dayjs from "dayjs";
 import Attendance from "../models/attendance.model.js";
 import Leave from "../models/leave.model.js";
+import Holiday from "../models/holiday.model.js";
 
 export const createEmployee = async (req, res) => {
   try {
@@ -141,7 +142,10 @@ export const getAllEmployees = async (req, res) => {
       fromDate: { $lte: todayEnd },
       toDate: { $gte: todayStart },
     });
-
+    const holiday = await Holiday.findOne({
+      fromDate: { $lte: todayEnd },
+      toDate: { $gte: todayStart },
+    });
     const attendanceMap = {};
     const leaveMap = {};
 
@@ -154,6 +158,15 @@ export const getAllEmployees = async (req, res) => {
     });
 
     const enrichedEmployee = allEmployees.map((emp) => {
+      if (holiday) {
+        return {
+          ...emp._doc,
+          attendance: {
+            status: "holiday",
+          },
+        };
+      }
+
       const att = attendanceMap[String(emp._id)];
       const leave = leaveMap[String(emp._id)];
 
@@ -226,7 +239,13 @@ export const getSingleEmployeeDetails = async (req, res) => {
       },
     });
 
-    if (leave) {
+    const holiday = await Holiday.findOne({
+      fromDate: { $lte: todayEnd },
+      toDate: { $gte: todayStart },
+    });
+    if (holiday) {
+      obj.status = "holiday";
+    } else if (leave) {
       obj.status = "Leave";
     } else if (!attendance) {
       obj.status = "yet-to-checkin";

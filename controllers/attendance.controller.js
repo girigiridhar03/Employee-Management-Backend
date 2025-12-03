@@ -3,12 +3,24 @@ import { response } from "../utils/response.js";
 import Attendance from "../models/attendance.model.js";
 import Employee from "../models/employee.model.js";
 import mongoose from "mongoose";
+import Holiday from "../models/holiday.model.js";
 
 export const attendanceToggle = async (req, res) => {
   try {
     const employeeId = req.employee.id;
 
     const today = dayjs().format("YYYY-MM-DD");
+    const todayStart = dayjs().startOf("day").toDate();
+    const todayEnd = dayjs().endOf("day").toDate();
+
+    const holiday = await Holiday.findOne({
+      fromDate: { $lte: todayEnd },
+      toDate: { $gte: todayStart },
+    });
+
+    if (holiday) {
+      return response(res, 400, "Today is holiday");
+    }
 
     const attendance = await Attendance.findOne({
       employeeDetails: employeeId,
@@ -69,6 +81,12 @@ export const getAttendanceForAllEmployees = async (req, res) => {
 
     const today = dayjs().format("YYYY-MM-DD");
     const attendanceRecord = await Attendance.find({ date: today });
+    const todayStart = dayjs().startOf("day").toDate();
+    const todayEnd = dayjs().endOf("day").toDate();
+    const holiday = await Holiday.findOne({
+      fromDate: { $lte: todayEnd },
+      toDate: { $gte: todayStart },
+    });
 
     const attendanceMap = {};
 
@@ -77,7 +95,15 @@ export const getAttendanceForAllEmployees = async (req, res) => {
     });
 
     const enRichedEmployees = allEmployees.map((emp) => {
+      if (holiday) {
+        return {
+          ...emp._doc,
+          status: "holiday",
+        };
+      }
+
       const att = attendanceMap[String(emp._id)];
+
       if (!att) {
         return {
           ...emp._doc,

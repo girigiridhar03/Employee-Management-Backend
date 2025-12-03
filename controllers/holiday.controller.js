@@ -54,6 +54,7 @@ export const createHoliday = async (req, res) => {
 
     response(res, 200, "Holiday is created", newHoliday);
   } catch (error) {
+    console.log(error);
     response(res, 500, "Internal Server Error");
   }
 };

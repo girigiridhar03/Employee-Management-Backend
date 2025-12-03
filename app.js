@@ -19,11 +19,13 @@ import employeeRouter from "./routes/employee.routes.js";
 import attendanceRouter from "./routes/attendance.routes.js";
 import leaveRouter from "./routes/leave.routes.js";
 import notificationRouter from "./routes/notification.routes.js";
+import holidayRouter from "./routes/holiday.routes.js";
 
 ///// Routes /////
 app.use("/api", employeeRouter);
 app.use("/api", attendanceRouter);
 app.use("/api", leaveRouter);
 app.use("/api", notificationRouter);
+app.use("/api", holidayRouter);
 
 export default app;

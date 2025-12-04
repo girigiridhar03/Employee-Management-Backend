@@ -5,10 +5,21 @@ import { fileURLToPath } from "url";
 import path from "path";
 
 const app = express();
-
+const allowOrigin = ["http://localhost:5173"];
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors());
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowOrigin.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by cors"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  })
+);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

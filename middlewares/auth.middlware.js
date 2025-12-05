@@ -1,3 +1,4 @@
+import Employee from "../models/employee.model.js";
 import { response } from "../utils/response.js";
 import jwt from "jsonwebtoken";
 
@@ -12,6 +13,12 @@ export const authMiddleware = async (req, res, next) => {
       return response(res, 401, "Access denied, invalid token format");
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await Employee.findById(decoded?.id).select("sessionId");
+
+    if (!user || decoded.sessionId !== user.sessionId) {
+      return response(res, 401, "Session expired. Please Login again");
+    }
+
     req.employee = decoded;
     next();
   } catch (error) {

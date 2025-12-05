@@ -75,6 +75,10 @@ const employeeSchema = new mongoose.Schema(
         return this.role !== "admin";
       },
     },
+    sessionId: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,

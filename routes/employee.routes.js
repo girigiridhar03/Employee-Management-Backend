@@ -9,6 +9,7 @@ import {
   getSingleEmployeeDetails,
   hierarchyTreeData,
   login,
+  logout,
   managerDetails,
   teamMembers,
   updatedDetails,
@@ -26,6 +27,7 @@ employeeRouter.post(
   createEmployee
 );
 employeeRouter.post("/auth/login", login);
+employeeRouter.post("/auth/logout", authMiddleware, logout);
 
 ///// Static Routes /////
 employeeRouter.get("/employees", authMiddleware, getAllEmployees);

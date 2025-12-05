@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import Attendance from "../models/attendance.model.js";
 import Leave from "../models/leave.model.js";
 import Holiday from "../models/holiday.model.js";
+import crypto from "crypto";
 
 export const createEmployee = async (req, res) => {
   try {
@@ -96,7 +97,8 @@ export const login = async (req, res) => {
     if (!isPassword) {
       return response(res, 400, "Invalid Credentials");
     }
-
+    checkEmployee.sessionId = crypto.randomUUID();
+    checkEmployee.save();
     const token = jwt.sign(
       {
         id: checkEmployee?._id,
@@ -105,12 +107,28 @@ export const login = async (req, res) => {
         username: checkEmployee?.username,
         role: checkEmployee?.role,
         reportingTo: checkEmployee?.reportingTo,
+        sessionId: checkEmployee?.sessionId,
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
     response(res, 200, "Logged in successfully", { token });
+  } catch (error) {
+    response(res, 500, "Internal Server Error");
+  }
+};
+
+export const logout = async (req, res) => {
+  try {
+    const { id } = req.employee;
+
+    const employee = await Employee.findById(id);
+
+    employee.sessionId = null;
+    await employee.save();
+
+    response(res, 200, "Employee logout successfully");
   } catch (error) {
     response(res, 500, "Internal Server Error");
   }
@@ -278,6 +296,7 @@ export const getSingleEmployeeDetails = async (req, res) => {
 
     response(res, 200, "Details fetched", { employee, attendance: obj });
   } catch (error) {
+    console.log("error", error);
     response(res, 500, "Internal Server error");
   }
 };
@@ -468,7 +487,6 @@ export const managerDetails = async (req, res) => {
 
     response(res, 200, "Fetched Manager Details successfully", managers);
   } catch (error) {
-    console.log(error);
     response(res, 500, "Internal Server error");
   }
 };
@@ -528,7 +546,6 @@ export const getSalaryStatsByDesignation = async (req, res) => {
     console.log(salaryStats);
     response(res, 200, "fetched salary stats successfully", salaryStats);
   } catch (error) {
-    console.log(error);
     response(res, 500, "Internal Server error");
   }
 };
@@ -711,7 +728,6 @@ export const hierarchyTreeData = async (req, res) => {
 
     response(res, 200, "Fetched Hierarchy Tree Successfully", tree[0]);
   } catch (error) {
-    console.log(error);
     response(res, 500, "Internal Server error");
   }
 };
